@@ -1,5 +1,8 @@
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
+import {
+  recordProfileCompletionOnce,
+} from "@/lib/analytics/record";
 import { activateActorSubscriptionOnOnboarding } from "@/lib/subscriptions";
 import type { AppUserRole } from "@/auth.config";
 
@@ -30,11 +33,13 @@ export async function markOnboardingComplete(
   role: AppUserRole,
 ): Promise<void> {
   if (role === "ACTOR") {
-    await prisma.actorProfile.update({
+    const profile = await prisma.actorProfile.update({
       where: { userId },
       data: { onboardingComplete: true },
     });
     await activateActorSubscriptionOnOnboarding(userId);
+    await recordProfileCompletionOnce(userId, role, { source: "onboarding" });
+
     return;
   }
 
@@ -42,4 +47,5 @@ export async function markOnboardingComplete(
     where: { userId },
     data: { onboardingComplete: true },
   });
+  await recordProfileCompletionOnce(userId, role, { source: "onboarding" });
 }

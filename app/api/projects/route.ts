@@ -4,6 +4,7 @@ import { requireCastingSession } from "@/lib/api/guards";
 import { getProjectsForCastingUser } from "@/lib/data/projects";
 import { toPrismaProjectStatus } from "@/lib/prisma-mappers";
 import { resolvePrismaProjectStatusForDeadline } from "@/lib/project-lifecycle";
+import { recordBusinessEvent } from "@/lib/analytics/record";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
@@ -73,6 +74,13 @@ export async function POST(request: Request) {
       status: resolvedStatus,
       createdById: sessionOrError.user.id,
     },
+  });
+
+  void recordBusinessEvent({
+    eventType: "PROJECT_CREATION",
+    userId: sessionOrError.user.id,
+    userRole: sessionOrError.user.role,
+    metadata: { projectId: project.id },
   });
 
   return apiSuccess({ project: { id: project.id } }, 201);

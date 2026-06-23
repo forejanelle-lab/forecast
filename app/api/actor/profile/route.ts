@@ -7,6 +7,7 @@ import {
   updateActorProfile,
 } from "@/lib/data/actors";
 import { getActorMembership } from "@/lib/data/projects";
+import { recordActorProfileCompletionIfComplete } from "@/lib/analytics/record";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -106,6 +107,8 @@ export async function PATCH(request: Request) {
   }
 
   const profile = await getActorProfileByUserId(sessionOrError.user.id);
+
+  void recordActorProfileCompletionIfComplete(sessionOrError.user.id);
 
   return apiSuccess({ profile });
 }

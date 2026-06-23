@@ -11,6 +11,7 @@ import {
   getActorSendDisabledReason,
   getCastingSendDisabledReason,
 } from "@/lib/message-rules";
+import { recordBusinessEvent } from "@/lib/analytics/record";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
@@ -94,6 +95,13 @@ export async function POST(
     sessionOrError.user.id,
     parsed.data.body,
   );
+
+  void recordBusinessEvent({
+    eventType: "MESSAGE_SENT",
+    userId: sessionOrError.user.id,
+    userRole: sessionOrError.user.role,
+    metadata: { conversationId: id },
+  });
 
   const updatedConversation = await getConversationAsMessage(
     id,

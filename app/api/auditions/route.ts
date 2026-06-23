@@ -12,6 +12,7 @@ import { isAuditionDeadlineInPast } from "@/lib/audition-utils";
 import {
   AUDITION_ALREADY_REQUESTED_ERROR,
 } from "@/lib/casting-submission-actions";
+import { recordBusinessEvent } from "@/lib/analytics/record";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
@@ -106,6 +107,13 @@ export async function POST(request: Request) {
   });
 
   await markActorPendingAuditionCelebration(parsed.data.actorId);
+
+  void recordBusinessEvent({
+    eventType: "AUDITION_REQUEST_SENT",
+    userId: sessionOrError.user.id,
+    userRole: sessionOrError.user.role,
+    metadata: { roleId: parsed.data.roleId },
+  });
 
   return apiSuccess({ audition: mapAuditionRow(audition) }, 201);
 }

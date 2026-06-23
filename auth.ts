@@ -4,6 +4,7 @@ import Credentials from "next-auth/providers/credentials";
 import { authConfig } from "@/auth.config";
 import { isEmailVerified } from "@/lib/auth-helpers";
 import { getUserDisplayName } from "@/lib/user";
+import { recordBusinessEvent } from "@/lib/analytics/record";
 import { prisma } from "@/lib/prisma";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
@@ -30,6 +31,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
           const valid = await bcrypt.compare(password, user.passwordHash);
           if (!valid) return null;
+
+          void recordBusinessEvent({
+            eventType: "LOGIN",
+            userId: user.id,
+            userRole: user.role,
+          });
 
           return {
             id: user.id,

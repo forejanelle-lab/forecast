@@ -6,6 +6,7 @@ import {
   ACTOR_AUTH_CLOSED_MESSAGE,
   isActorAccountDisabled,
 } from "@/lib/auth-access";
+import { buildSignupReferralSourceFromSearchParams } from "@/lib/signup-referral-source";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
@@ -77,6 +78,10 @@ function SignUpFormContent({
           email: normalizedEmail,
           password,
           role: submitRole,
+          referralSource: buildSignupReferralSourceFromSearchParams(
+            searchParams,
+            document.referrer,
+          ),
         }),
       });
 

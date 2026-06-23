@@ -6,7 +6,7 @@ import { useAuditionSubmissionsOptional } from "@/components/providers/audition-
 import { useCastingProfileOptional } from "@/components/providers/casting-profile-provider";
 import { useMessagesReadOptional } from "@/components/providers/messages-read-provider";
 import { Tooltip } from "@/components/ui/tooltip";
-import { CASTING_ANALYTICS_LOCKED_TOOLTIP, CASTING_SEARCH_ACTORS_LOCKED_TOOLTIP } from "@/lib/casting-analytics-lock";
+import { CASTING_SEARCH_ACTORS_LOCKED_TOOLTIP } from "@/lib/casting-analytics-lock";
 import { buildSupportMailtoUrl } from "@/lib/support";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
@@ -49,7 +49,7 @@ const castingNav: NavItem[] = [
   { label: "Projects", href: "/projects", icon: <Briefcase className={iconClass} /> },
   { label: "Review Auditions", href: "/casting/submissions", icon: <Film className={iconClass} /> },
   { label: "Messages", href: "/casting/messages", icon: <MessageSquare className={iconClass} /> },
-  { label: "Casting Analytics", href: "/casting/analytics", icon: <BarChart3 className={iconClass} />, disabled: true, disabledTooltip: CASTING_ANALYTICS_LOCKED_TOOLTIP },
+  { label: "Casting Analytics", href: "/casting/analytics", icon: <BarChart3 className={iconClass} /> },
   { label: "Search Actors", href: "/casting/search", icon: <Search className={iconClass} />, disabled: true, disabledTooltip: CASTING_SEARCH_ACTORS_LOCKED_TOOLTIP },
 ];
 
@@ -125,7 +125,7 @@ export function Sidebar({
             return (
               <Tooltip
                 key={item.href}
-                content={item.disabledTooltip ?? CASTING_ANALYTICS_LOCKED_TOOLTIP}
+                content={item.disabledTooltip ?? "This feature is not available yet."}
                 side="right"
                 className="w-full"
               >

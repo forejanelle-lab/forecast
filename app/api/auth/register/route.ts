@@ -7,7 +7,9 @@ import {
   sendNewAccountNotificationToSupport,
   sendVerificationEmail,
 } from "@/lib/email";
+import { recordSignupEvents } from "@/lib/analytics/record";
 import { prisma } from "@/lib/prisma";
+import { formatReferralSourceLabel } from "@/lib/signup-referral-source";
 import { formatFullName } from "@/lib/user";
 
 const registerSchema = z.object({
@@ -16,6 +18,7 @@ const registerSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   role: z.enum(["ACTOR", "CASTING"]),
+  referralSource: z.string().trim().max(500).optional(),
 });
 
 export async function POST(request: Request) {
@@ -27,7 +30,8 @@ export async function POST(request: Request) {
       return apiError(parsed.error.issues[0]?.message ?? "Invalid input");
     }
 
-    const { firstName, lastName, email: rawEmail, password, role } = parsed.data;
+    const { firstName, lastName, email: rawEmail, password, role, referralSource } =
+      parsed.data;
     const email = rawEmail.trim().toLowerCase();
     const normalizedFirstName = firstName.trim();
     const normalizedLastName = lastName.trim();
@@ -60,11 +64,16 @@ export async function POST(request: Request) {
       console.error("Verification email failed:", emailError);
     }
 
+    await recordSignupEvents(user.id, role);
+
     try {
       await sendNewAccountNotificationToSupport({
-        name: fullName,
+        firstName: normalizedFirstName,
+        lastName: normalizedLastName,
         email,
         role,
+        signupAt: user.createdAt,
+        referralSource: formatReferralSourceLabel(referralSource),
       });
     } catch (emailError) {
       console.error("New account support notification failed:", emailError);

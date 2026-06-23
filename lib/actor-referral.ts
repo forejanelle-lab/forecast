@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { recordPremiumUpgrade } from "@/lib/analytics/record";
 
 export const ACTOR_TRIAL_DAYS = 30;
 
@@ -73,6 +74,8 @@ export async function submitActorReferral(
       trialEndsAt,
     },
   });
+
+  void recordPremiumUpgrade(referrerId, "ACTOR", { source: "referral" });
 
   return {
     referralId: referral.id,

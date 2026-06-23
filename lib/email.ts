@@ -73,26 +73,51 @@ export async function sendVerificationEmail(
 }
 
 export async function sendNewAccountNotificationToSupport(params: {
-  name: string;
+  firstName: string;
+  lastName: string;
   email: string;
-  role: string;
+  role: "ACTOR" | "CASTING";
+  signupAt: Date;
+  referralSource?: string;
 }): Promise<void> {
-  const roleLabel = params.role === "ACTOR" ? "Actor" : "Casting";
+  const userTypeLabel =
+    params.role === "ACTOR" ? "Actor" : "Casting Director";
+  const signupAtLabel = new Intl.DateTimeFormat("en-US", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "UTC",
+  }).format(params.signupAt);
+  const referralSource = params.referralSource?.trim();
+
+  const subject = `🎉 New Fore Cast Signup - ${userTypeLabel}`;
+
+  const referralText = referralSource
+    ? `Referral Source: ${referralSource}\n`
+    : "";
+  const referralHtml = referralSource
+    ? `<li><strong>Referral Source:</strong> ${referralSource}</li>`
+    : "";
 
   await sendEmail({
     to: SUPPORT_EMAIL,
-    subject: `New ${roleLabel} account: ${params.email}`,
+    subject,
     text:
-      `A new account was created on Fore Cast.\n\n` +
-      `Name: ${params.name}\n` +
-      `Email: ${params.email}\n` +
-      `Role: ${roleLabel}\n`,
+      `A new Fore Cast account was created.\n\n` +
+      `User Type: ${userTypeLabel}\n` +
+      `First Name: ${params.firstName}\n` +
+      `Last Name: ${params.lastName}\n` +
+      `Email Address: ${params.email}\n` +
+      `Signup Date/Time: ${signupAtLabel} UTC\n` +
+      referralText,
     html: `
-      <p>A new account was created on <strong>Fore Cast</strong>.</p>
+      <p>A new <strong>Fore Cast</strong> account was created.</p>
       <ul>
-        <li><strong>Name:</strong> ${params.name}</li>
-        <li><strong>Email:</strong> ${params.email}</li>
-        <li><strong>Role:</strong> ${roleLabel}</li>
+        <li><strong>User Type:</strong> ${userTypeLabel}</li>
+        <li><strong>First Name:</strong> ${params.firstName}</li>
+        <li><strong>Last Name:</strong> ${params.lastName}</li>
+        <li><strong>Email Address:</strong> ${params.email}</li>
+        <li><strong>Signup Date/Time:</strong> ${signupAtLabel} UTC</li>
+        ${referralHtml}
       </ul>
     `,
   });

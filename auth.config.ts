@@ -1,4 +1,5 @@
 import type { NextAuthConfig } from "next-auth";
+import { isAdminEmail } from "@/lib/admin-access";
 
 export type AppUserRole = "ACTOR" | "CASTING";
 
@@ -99,9 +100,14 @@ export const authConfig: NextAuthConfig = {
       const isActorRoute = pathname.startsWith("/actor");
       const isCastingRoute =
         pathname.startsWith("/casting") || pathname.startsWith("/projects");
+      const isAdminRoute = pathname.startsWith("/admin");
 
-      if (!isLoggedIn && (isActorRoute || isCastingRoute)) {
+      if (!isLoggedIn && (isActorRoute || isCastingRoute || isAdminRoute)) {
         return false;
+      }
+
+      if (isLoggedIn && isAdminRoute && !isAdminEmail(auth?.user?.email)) {
+        return Response.redirect(new URL("/", request.url));
       }
 
       if (isLoggedIn && !isEmailVerified) {

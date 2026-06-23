@@ -79,6 +79,20 @@ enum SubscriptionStatus {
   INCOMPLETE
 }
 
+enum BusinessAnalyticsEventType {
+  SIGNUP
+  LOGIN
+  ACTOR_REGISTRATION
+  CASTING_REGISTRATION
+  PROFILE_COMPLETION
+  PROJECT_CREATION
+  ROLE_CREATION
+  APPLICATION_SUBMITTED
+  AUDITION_REQUEST_SENT
+  MESSAGE_SENT
+  PREMIUM_UPGRADE
+}
+
 model User {
   id            String    @id @default(cuid())
   firstName     String?
@@ -507,4 +521,34 @@ model Notification {
   createdAt DateTime             @default(now())
 
   @@index([userId])
+}
+
+model SiteAnalyticsEvent {
+  id        String   @id @default(cuid())
+  eventType String   @default("pageview")
+  path      String
+  referrer  String?
+  country   String?
+  sessionId String
+  deviceId  String?
+  source    String   @default("app")
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([path])
+  @@index([sessionId])
+  @@index([country])
+}
+
+model BusinessAnalyticsEvent {
+  id        String                       @id @default(cuid())
+  eventType BusinessAnalyticsEventType
+  userId    String?
+  userRole  UserRole?
+  metadata  Json?
+  createdAt DateTime                     @default(now())
+
+  @@index([eventType])
+  @@index([createdAt])
+  @@index([eventType, createdAt])
 }

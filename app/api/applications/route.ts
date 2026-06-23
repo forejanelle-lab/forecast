@@ -7,6 +7,7 @@ import {
 } from "@/lib/data/projects";
 import { syncAllProjectLifecycleStatuses } from "@/lib/project-lifecycle";
 import { roleAcceptsApplicationsServer } from "@/lib/role-acceptance-server";
+import { recordBusinessEvent } from "@/lib/analytics/record";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
@@ -129,6 +130,13 @@ export async function POST(request: Request) {
       title: "New submission",
       message: `New submission for ${role.characterName}.`,
     },
+  });
+
+  void recordBusinessEvent({
+    eventType: "APPLICATION_SUBMITTED",
+    userId: sessionOrError.user.id,
+    userRole: sessionOrError.user.role,
+    metadata: { roleId: parsed.data.roleId },
   });
 
   return apiSuccess({ application: mapApplicationRow(application) }, 201);

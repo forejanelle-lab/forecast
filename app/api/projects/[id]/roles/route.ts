@@ -4,6 +4,7 @@ import { requireCastingSession } from "@/lib/api/guards";
 import { getRolesForProject, mapRoleRow } from "@/lib/data/projects";
 import { persistRoleAuditionMaterialBytesFromFiles } from "@/lib/role-audition-material-files-server";
 import { sanitizeRoleAuditionFilesForDb, parseRoleAuditionFiles } from "@/lib/role-audition-files";
+import { recordBusinessEvent } from "@/lib/analytics/record";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
@@ -103,6 +104,13 @@ export async function POST(
       console.error("Failed to persist role audition material bytes on create:", error);
     }
   }
+
+  void recordBusinessEvent({
+    eventType: "ROLE_CREATION",
+    userId: sessionOrError.user.id,
+    userRole: sessionOrError.user.role,
+    metadata: { projectId: id, roleId: role.id },
+  });
 
   return apiSuccess({ role: mapRoleRow(role) }, 201);
 }
