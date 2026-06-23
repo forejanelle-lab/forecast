@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
-import { SUPPORT_EMAIL } from "@/lib/support";
+import { Resend } from "resend";
+import { getSignupNotificationRecipients } from "@/lib/email-recipients";
 
 function getAppUrl(): string {
   const url = process.env.AUTH_URL?.trim() || process.env.NEXT_PUBLIC_APP_URL?.trim();
@@ -7,8 +8,30 @@ function getAppUrl(): string {
   return "http://localhost:3000";
 }
 
+function getEmailFromAddress(): string {
+  return (
+    process.env.EMAIL_FROM?.trim() ||
+    process.env.SMTP_FROM?.trim() ||
+    "Fore Cast <onboarding@resend.dev>"
+  );
+}
+
+function getResendClient(): Resend | null {
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  if (!apiKey) return null;
+  return new Resend(apiKey);
+}
+
 function isSmtpConfigured(): boolean {
   return Boolean(process.env.SMTP_HOST?.trim() && process.env.SMTP_FROM?.trim());
+}
+
+function isResendConfigured(): boolean {
+  return Boolean(process.env.RESEND_API_KEY?.trim());
+}
+
+function isEmailConfigured(): boolean {
+  return isResendConfigured() || isSmtpConfigured();
 }
 
 async function getTransporter() {
@@ -26,27 +49,56 @@ async function getTransporter() {
 }
 
 interface SendEmailOptions {
-  to: string;
+  to: string | string[];
   subject: string;
   html: string;
   text: string;
 }
 
-export async function sendEmail(options: SendEmailOptions): Promise<void> {
-  const from = process.env.SMTP_FROM?.trim() ?? "Fore Cast <noreply@forecast.com>";
+function logEmailNotConfigured(options: SendEmailOptions): void {
+  const recipients = Array.isArray(options.to) ? options.to.join(", ") : options.to;
+  const message =
+    "[email] Email delivery is not configured — set RESEND_API_KEY or SMTP_HOST + SMTP_FROM on Vercel.\n" +
+    `To: ${recipients}\nSubject: ${options.subject}\n${options.text}`;
 
-  if (!isSmtpConfigured()) {
-    console.info(
-      "[email:dev] SMTP not configured — logging message instead of sending.\n" +
-        `To: ${options.to}\nSubject: ${options.subject}\n${options.text}`,
-    );
+  if (process.env.NODE_ENV === "production") {
+    console.error(message);
+    return;
+  }
+
+  console.info(`[email:dev] ${message}`);
+}
+
+export async function sendEmail(options: SendEmailOptions): Promise<void> {
+  const recipients = Array.isArray(options.to) ? options.to : [options.to];
+  const from = getEmailFromAddress();
+
+  if (!isEmailConfigured()) {
+    logEmailNotConfigured(options);
+    return;
+  }
+
+  const resend = getResendClient();
+  if (resend) {
+    const { error } = await resend.emails.send({
+      from,
+      to: recipients,
+      subject: options.subject,
+      html: options.html,
+      text: options.text,
+    });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
     return;
   }
 
   const transporter = await getTransporter();
   await transporter.sendMail({
     from,
-    to: options.to,
+    to: recipients.join(","),
     subject: options.subject,
     html: options.html,
     text: options.text,
@@ -88,6 +140,7 @@ export async function sendNewAccountNotificationToSupport(params: {
     timeZone: "UTC",
   }).format(params.signupAt);
   const referralSource = params.referralSource?.trim();
+  const recipients = getSignupNotificationRecipients();
 
   const subject = `🎉 New Fore Cast Signup - ${userTypeLabel}`;
 
@@ -99,7 +152,7 @@ export async function sendNewAccountNotificationToSupport(params: {
     : "";
 
   await sendEmail({
-    to: SUPPORT_EMAIL,
+    to: recipients,
     subject,
     text:
       `A new Fore Cast account was created.\n\n` +
