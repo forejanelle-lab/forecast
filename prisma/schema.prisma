@@ -1,0 +1,510 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  ACTOR
+  CASTING
+}
+
+enum ProjectStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+  COMPLETED
+}
+
+enum RoleStatus {
+  OPEN
+  CLOSED
+  CASTING
+  FILLED
+}
+
+enum ApplicationStatus {
+  SUBMITTED
+  AUDITION_VIEWED
+  REVIEWING
+  AUDITION_REQUESTED
+  CALLBACK
+  REJECTED
+  ACCEPTED
+}
+
+enum AuditionStatus {
+  REQUESTED
+  SUBMITTED
+  DECLINED
+  WITHDRAWN
+  ACCEPTED
+  COMPLETED
+}
+
+enum NotificationCategory {
+  APPLICATIONS
+  AUDITIONS
+  PROJECTS
+  MESSAGES
+  SYSTEM
+  BILLING
+}
+
+enum ActorMediaType {
+  VIDEO
+  AUDIO
+  DOCUMENT
+}
+
+enum ActorMediaCategory {
+  MATERIAL
+  VIDEO
+}
+
+enum SubscriptionPlan {
+  FREE
+  ACTOR_PREMIUM
+  CASTING_PRO
+}
+
+enum SubscriptionStatus {
+  NONE
+  ACTIVE
+  TRIALING
+  PAST_DUE
+  CANCELLED
+  INCOMPLETE
+}
+
+model User {
+  id            String    @id @default(cuid())
+  firstName     String?
+  lastName      String?
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  passwordHash  String?
+  image         String?
+  role          UserRole
+  subscribed    Boolean   @default(false)
+  subscribedAt  DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts              Account[]
+  sessions              Session[]
+  actorProfile          ActorProfile?
+  castingProfile        CastingProfile?
+  subscription          Subscription?
+  projects              Project[]
+  applications          Application[]
+  auditionsAsActor      Audition[]            @relation("ActorAuditions")
+  auditionsCasting      Audition[]            @relation("CastingAuditions")
+  messagesSent          Message[]             @relation("SentMessages")
+  messagesReceived      Message[]             @relation("ReceivedMessages")
+  notifications         Notification[]
+  conversationsAsActor  Conversation[]        @relation("ActorConversations")
+  conversationsAsCasting Conversation[]        @relation("CastingConversations")
+  conversationMessages  ConversationMessage[]
+  actorReferrals        ActorReferral[]
+  profileViewsAsActor   ProfileView[]         @relation("ProfileViewsActor")
+  profileViewsAsViewer  ProfileView[]         @relation("ProfileViewsViewer")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Subscription {
+  id                   String             @id @default(cuid())
+  userId               String             @unique
+  user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan                 SubscriptionPlan   @default(FREE)
+  status               SubscriptionStatus @default(NONE)
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  stripePriceId        String?
+  trialEndsAt          DateTime?
+  currentPeriodStart   DateTime?
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean            @default(false)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  @@index([stripeCustomerId])
+  @@index([stripeSubscriptionId])
+}
+
+model ActorProfile {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bio                String?  @db.Text
+  location           String?
+  locations          String[] @default([])
+  height             String?
+  gender             String?
+  playingAgeMin      Int?
+  playingAgeMax      Int?
+  unionStatus        String?
+  membership         String   @default("FREE")
+  trialStartedAt     DateTime?
+  trialEndsAt        DateTime?
+  headshotUrl        String?
+  profilePhotoUrl    String?
+  demoReelUrl        String?
+  resumeUrl          String?
+  imdbUrl            String?
+  websiteUrl         String?
+  featured           Boolean  @default(false)
+  verified           Boolean  @default(false)
+  onboardingComplete Boolean  @default(false)
+  pendingBookedCelebration Boolean @default(false)
+  pendingAuditionCelebration Boolean @default(false)
+  skills             String[] @default([])
+  languages          String[] @default([])
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  credits    Credit[]
+  savedRoles SavedRole[]
+  headshots  ActorHeadshot[]
+  media      ActorMedia[]
+  links      ActorLink[]
+}
+
+model ActorReferral {
+  id             String   @id @default(cuid())
+  referrerId     String   @unique
+  referrer       User     @relation(fields: [referrerId], references: [id], onDelete: Cascade)
+  referredName   String
+  referredEmail  String
+  trialStartedAt DateTime @default(now())
+  trialEndsAt    DateTime
+  createdAt      DateTime @default(now())
+
+  @@index([referredEmail])
+}
+
+model CastingProfile {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company            String?
+  officeName         String?
+  title              String?
+  phoneNumber        String?
+  address            String?
+  profilePhotoUrl    String?
+  onboardingComplete Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model ActorHeadshot {
+  id        String       @id @default(cuid())
+  actorId   String
+  actor     ActorProfile @relation(fields: [actorId], references: [id], onDelete: Cascade)
+  label     String
+  url       String?
+  fileName  String?
+  featured  Boolean      @default(false)
+  sortOrder Int          @default(0)
+  createdAt DateTime     @default(now())
+
+  @@index([actorId])
+}
+
+model ActorMedia {
+  id        String             @id @default(cuid())
+  actorId   String
+  actor     ActorProfile       @relation(fields: [actorId], references: [id], onDelete: Cascade)
+  label     String
+  type      ActorMediaType
+  category  ActorMediaCategory @default(MATERIAL)
+  url       String?
+  fileName  String?
+  duration  String?
+  sortOrder Int                @default(0)
+  createdAt DateTime           @default(now())
+
+  @@index([actorId])
+}
+
+model ActorLink {
+  id        String       @id @default(cuid())
+  actorId   String
+  actor     ActorProfile @relation(fields: [actorId], references: [id], onDelete: Cascade)
+  label     String
+  url       String
+  sortOrder Int          @default(0)
+  createdAt DateTime     @default(now())
+
+  @@index([actorId])
+}
+
+model Credit {
+  id      String       @id @default(cuid())
+  actorId String
+  actor   ActorProfile @relation(fields: [actorId], references: [id], onDelete: Cascade)
+  title   String
+  role    String
+  type    String
+  year    Int
+
+  @@index([actorId])
+}
+
+model Project {
+  id                 String        @id @default(cuid())
+  title              String
+  status             ProjectStatus @default(DRAFT)
+  productionCompany  String
+  projectType        String
+  unionStatus        String?
+  location           String?
+  submissionDeadline DateTime?
+  shootDates         String?
+  compensation       String?
+  description        String?       @db.Text
+  createdById        String
+  createdBy          User          @relation(fields: [createdById], references: [id])
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  roles         Role[]
+  conversations Conversation[]
+}
+
+model Role {
+  id                   String     @id @default(cuid())
+  projectId            String
+  project              Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  characterName        String
+  playingAge           String?
+  gender               String?
+  ethnicity            String?
+  roleType             String?
+  compensation         String?
+  shootDates           String?
+  submissionDeadline   DateTime?
+  description          String?    @db.Text
+  auditionInstructions String?    @db.Text
+  auditionFiles        Json?
+  status               RoleStatus @default(OPEN)
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+
+  applications Application[]
+  auditions    Audition[]
+  savedBy      SavedRole[]
+  auditionMaterialFiles RoleAuditionMaterialFile[]
+
+  @@index([projectId])
+  @@index([status])
+}
+
+model RoleAuditionMaterialFile {
+  id        String   @id @default(cuid())
+  roleId    String
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  label     String
+  fileName  String
+  type      String
+  mimeType  String?
+  data      Bytes
+  createdAt DateTime @default(now())
+
+  @@unique([roleId, fileName])
+  @@index([roleId])
+}
+
+model Application {
+  id        String            @id @default(cuid())
+  roleId    String
+  role      Role              @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  actorId   String
+  actor     User              @relation(fields: [actorId], references: [id])
+  status             ApplicationStatus @default(SUBMITTED)
+  notes              String?           @db.Text
+  bookingOfferSentAt DateTime?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  submissionItems ApplicationSubmissionItem[]
+
+  @@unique([roleId, actorId])
+  @@index([actorId])
+  @@index([roleId])
+}
+
+model ApplicationSubmissionItem {
+  id            String      @id @default(cuid())
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  label         String
+  fileName      String
+  fileUrl       String?
+  fileType      String?
+  createdAt     DateTime    @default(now())
+
+  @@index([applicationId])
+}
+
+model ProfileView {
+  id           String   @id @default(cuid())
+  actorUserId  String
+  actorUser    User     @relation("ProfileViewsActor", fields: [actorUserId], references: [id], onDelete: Cascade)
+  viewerUserId String?
+  viewerUser   User?    @relation("ProfileViewsViewer", fields: [viewerUserId], references: [id], onDelete: SetNull)
+  createdAt    DateTime @default(now())
+
+  @@index([actorUserId])
+  @@index([viewerUserId])
+}
+
+model SavedRole {
+  id        String       @id @default(cuid())
+  actorId   String
+  actor     ActorProfile @relation(fields: [actorId], references: [id], onDelete: Cascade)
+  roleId    String
+  role      Role         @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  createdAt DateTime     @default(now())
+
+  @@unique([actorId, roleId])
+}
+
+model Audition {
+  id                 String         @id @default(cuid())
+  roleId             String
+  role               Role           @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  actorId            String
+  actor              User           @relation("ActorAuditions", fields: [actorId], references: [id])
+  castingId          String
+  casting            User           @relation("CastingAuditions", fields: [castingId], references: [id])
+  status             AuditionStatus @default(REQUESTED)
+  deadline           DateTime?
+  location           String?
+  selfTapeUrl        String?
+  instructions       String?        @db.Text
+  scenes             String[]       @default([])
+  uploadRequirements String[]       @default([])
+  requestedAt        DateTime       @default(now())
+  notes              String?        @db.Text
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  submissionItems AuditionSubmissionItem[]
+
+  @@index([actorId])
+  @@index([castingId])
+  @@index([roleId])
+}
+
+model AuditionSubmissionItem {
+  id         String   @id @default(cuid())
+  auditionId String
+  audition   Audition @relation(fields: [auditionId], references: [id], onDelete: Cascade)
+  label      String
+  fileName   String
+  fileUrl    String?
+  createdAt  DateTime @default(now())
+
+  @@index([auditionId])
+}
+
+model Conversation {
+  id            String   @id @default(cuid())
+  projectId     String
+  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  actorUserId   String
+  actorUser     User     @relation("ActorConversations", fields: [actorUserId], references: [id])
+  castingUserId String
+  castingUser   User     @relation("CastingConversations", fields: [castingUserId], references: [id])
+  lastMessageAt DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  messages ConversationMessage[]
+
+  @@unique([projectId, actorUserId])
+  @@index([castingUserId])
+  @@index([actorUserId])
+}
+
+model ConversationMessage {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         User         @relation(fields: [senderId], references: [id])
+  body           String       @db.Text
+  read           Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId])
+  @@index([senderId])
+}
+
+model Message {
+  id         String   @id @default(cuid())
+  senderId   String
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id])
+  receiverId String
+  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  content    String   @db.Text
+  read       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([senderId])
+  @@index([receiverId])
+}
+
+model Notification {
+  id        String               @id @default(cuid())
+  userId    String
+  user      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category  NotificationCategory
+  title     String
+  message   String               @db.Text
+  read      Boolean              @default(false)
+  createdAt DateTime             @default(now())
+
+  @@index([userId])
+}

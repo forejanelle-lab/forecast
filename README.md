@@ -1,36 +1,84 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Fore Cast
 
-## Getting Started
+The modern operating system for the entertainment industry — connecting actors and casting directors.
 
-First, run the development server:
+## Quick Start (Supabase)
+
+### 1. Install
+
+```bash
+npm install
+cp .env.example .env
+```
+
+### 2. Configure Supabase
+
+```bash
+npm run db:check
+```
+
+Add your Supabase connection strings to `.env` (see [supabase/README.md](./supabase/README.md)):
+
+- `DATABASE_URL` — pooler URL (port 6543, `?pgbouncer=true`)
+- `DIRECT_URL` — direct URL (port 5432) for migrations
+- `AUTH_SECRET` — generate with `openssl rand -base64 32`
+
+### 3. Create tables & seed demo data
+
+```bash
+npm run db:setup
+```
+
+This runs migrations against Supabase and seeds demo accounts.
+
+### 4. Run
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Demo Accounts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Password for every account: `password123`
 
-## Learn More
+### Casting directors
 
-To learn more about Next.js, take a look at the following resources:
+| Name | Email |
+|------|-------|
+| Rachel Morrison | `rachel@forecast.com` |
+| Derek Walsh | `derek@forecast.com` |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Actors
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Name | Email |
+|------|-------|
+| Maya Chen | `maya@forecast.com` |
+| Janelle Fore | `janelle@forecast.com` |
+| Marcus Rivera | `marcus@forecast.com` |
+| Elena Brooks (Premium) | `elena@forecast.com` |
 
-## Deploy on Vercel
+Re-seed anytime with `npm run db:seed` (clears all data and reloads mock data).
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Scripts
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start development server |
+| `npm run build` | Production build |
+| `npm run db:setup` | Apply migrations + seed |
+| `npm run db:migrate:deploy` | Apply migrations only |
+| `npm run db:seed` | Seed demo data |
+| `npm run db:studio` | Open Prisma Studio |
+
+## Stack
+
+- **Next.js 16** — App Router
+- **Auth.js** — Credentials + JWT sessions
+- **Prisma + Supabase PostgreSQL** — Database
+- **Tailwind CSS v4** — Styling
+
+## Database docs
+
+Full Supabase setup (SQL editor, connection strings, troubleshooting): [supabase/README.md](./supabase/README.md)
